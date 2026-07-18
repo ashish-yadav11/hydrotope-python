@@ -46,15 +46,14 @@ def Propagator(w: Rational, k: Rational, g:Rational) -> Expr:
 
 # generates all set partitions of S into k non-empty parts
 def SetPartitions(S: List[int], k: int) -> Iterator[Tuple[Tuple[int], ...]]:
-    if len(S) != len(set(S)):
-        raise ValueError("items in S must be distinct")
-
     if k == 0:
         if not S:
             yield ()
         return
+
     if len(S) < k:
         return
+
     if len(S) == 1:
         if k == 1:
             yield ((S[0],),)
@@ -147,7 +146,7 @@ def MakeKinematics(n: int, wf: List[Rational], ss: List[int], g: Rational) -> Tu
     w1 = -(sumwf + wn)
 
     ws = [w1] + list(wf) + [wn]
-    ks = [ s*w**2 / g for s, w in zip(ss, ws)]
+    ks = [s*w**2 / g for s, w in zip(ss, ws)]
 
     return ks, ws
 
