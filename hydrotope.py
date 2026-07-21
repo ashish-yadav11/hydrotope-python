@@ -3,7 +3,7 @@ from math import factorial
 from sympy import Expr, Rational, I
 from functools import lru_cache
 from itertools import combinations, permutations
-from typing import List, Tuple, Iterator
+from typing import List, Tuple, Iterator, Callable
 
 
 def Ekernel(n: int, k: List[Rational]) -> Rational:
@@ -30,9 +30,9 @@ def Fkernel(n: int, k: List[Rational]) -> Rational:
 
 def Vertex(n: int, k: List[Rational], w: List[Rational]) -> Expr:
     val = Rational(0)
-    for ip in permutations(range(n)):
-        pk = [k[i] for i in ip]
-        val += w[ip[0]] * w[ip[1]] * Fkernel(n, pk)
+    for p in permutations(range(n)):
+        kp = [k[i] for i in p]
+        val += w[p[0]] * w[p[1]] * Fkernel(n, kp)
 
     return -I * val / 2
 
@@ -63,8 +63,8 @@ def SetPartitions(S: List[int], k: int) -> Iterator[Tuple[Tuple[int], ...]]:
             yield s[:i] + ((s0,) + s[i],) + s[i+1:]
 
 
-def BGamplitude(k: List[Rational], w: List[Rational], g: Rational) -> Expr:
-    @lru_cache(None)
+def BGcurrent(k: List[Rational], w: List[Rational], g: Rational) -> Callable[[Tuple[int, ...], Expr]]:
+    @lru_cache(maxsize=None)
     def current(subset: Tuple[int, ...]) -> Expr:
         s = list(subset)
 
@@ -88,8 +88,13 @@ def BGamplitude(k: List[Rational], w: List[Rational], g: Rational) -> Expr:
 
         return val * Propagator(sumsk, sumsw, g)
 
+    return current
+
+
+def BGamplitude(k: List[Rational], w: List[Rational], g: Rational) -> Expr:
     n = len(k)
     nbut0 = list(range(1, n))
+    current = BGcurrent(k, w, g)
     val = Rational(0)
 
     for m in range(2, n):
@@ -108,10 +113,10 @@ def BGamplitude(k: List[Rational], w: List[Rational], g: Rational) -> Expr:
 
 def MakeKinematics(wf: List[Rational], ss: List[int], g: Rational) -> Tuple[List[Rational], List[Rational]]:
     if len(ss) != len(wf) + 2:
-        raise ValueError("2 more signs are required than the free frequencies")
+        raise ValueError("expected 2 more signs than frequencies")
 
     if ss[0] + ss[-1] != 0:
-        raise ValueError("first and last signs should be opposite")
+        raise ValueError("expected opposite first and last signs")
 
     sumwf = sum(wf)
     sf = ss[1:-1]
@@ -133,8 +138,8 @@ def InclExclFormula(w: List[Rational]) -> Expr:
     betasq = min(w[0]**2, w[1]**2)
     val = Rational(0)
     for r in range(np + 1):
-        for ir in combinations(range(np), r):
-            subwp = [wp[i] for i in ir]
+        for c in combinations(range(np), r):
+            subwp = [wp[i] for i in c]
             sqsum = sum(x**2 for x in subwp)
             val += (-1)**len(subwp) * max(Rational(0), betasq - sqsum)**(n-3)
     return I * w[0] * w[1] * 2**(n-1) * val
