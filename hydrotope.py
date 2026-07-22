@@ -111,6 +111,10 @@ def BGamplitude(k: List[Rational], w: List[Rational], g: Rational) -> Expr:
     return val
 
 
+# given n signs ss = [σ(1), σ(2), ..., σ(n-1), σ(n) = -σ(1)], and n-2
+# frequencies wf = [ω(2), ..., ω(n-1)]; create on-shell momenta and frequencies
+# (kᵢ = σᵢωᵢ², ωᵢ), 1 ≤ i ≤ n with Σkᵢ = Σωᵢ = 0. [the restriction σ(n) = -σ(1)
+# is only for convenience—it leads to a unique solution.]
 def MakeKinematics(wf: List[Rational], ss: List[int], g: Rational) -> Tuple[List[Rational], List[Rational]]:
     if len(ss) != len(wf) + 2:
         raise ValueError("expected 2 more signs than frequencies")
