@@ -6,33 +6,33 @@ from itertools import combinations, permutations
 from typing import List, Tuple, Iterator, Callable
 
 
-def Ekernel(n: int, k: List[Rational]) -> Rational:
+def Ekernel(n: int, ks: List[Rational]) -> Rational:
     if n == 3:
-        return -(abs(k[0])*abs(k[1]) + k[0]*k[1]) / 2
+        return -(abs(ks[0])*abs(ks[1]) + ks[0]*ks[1]) / 2
 
-    val = abs(k[1])**(n-3) * Ekernel(3, [k[0], k[1], sum(k[2:])]) / factorial(n-2)
+    val = abs(ks[1])**(n-3) * Ekernel(3, [ks[0], ks[1], sum(ks[2:])]) / factorial(n-2)
 
     for m in range(1, n-2): # m goes upto n-3
-        val -= (abs(k[1])**m / factorial(m)) * Ekernel(n-m, [k[0], sum(k[1:m+2])] + k[m+2:])
+        val -= (abs(ks[1])**m / factorial(m)) * Ekernel(n-m, [ks[0], sum(ks[1:m+2])] + ks[m+2:])
 
     return val
 
 
-def Fkernel(n: int, k: List[Rational]) -> Rational:
-    val = 2 * Ekernel(n, k) / abs(k[0])
+def Fkernel(n: int, ks: List[Rational]) -> Rational:
+    val = 2 * Ekernel(n, ks) / abs(ks[0])
 
     for m in range(1, n-2): # m goes upto n-3
-        sm = sum(k[1:m+2])
-        val -= 2 * Ekernel(m+2, [-sm] + k[1:m+2]) * Fkernel(n-m, [k[0], sm] + k[m+2:])
+        sm = sum(ks[1:m+2])
+        val -= 2 * Ekernel(m+2, [-sm] + ks[1:m+2]) * Fkernel(n-m, [ks[0], sm] + ks[m+2:])
 
-    return val / abs(k[1])
+    return val / abs(ks[1])
 
 
-def Vertex(n: int, k: List[Rational], w: List[Rational]) -> Expr:
+def Vertex(n: int, ks: List[Rational], ws: List[Rational]) -> Expr:
     val = Rational(0)
     for p in permutations(range(n)):
-        kp = [k[i] for i in p]
-        val += w[p[0]] * w[p[1]] * Fkernel(n, kp)
+        kp = [ks[i] for i in p]
+        val += ws[p[0]] * ws[p[1]] * Fkernel(n, kp)
 
     return -I * val / 2
 
@@ -42,7 +42,7 @@ def Propagator(k: Rational, w: Rational, g:Rational) -> Expr:
 
 
 # generates all set partitions of S into k non-empty parts
-def SetPartitions(S: List[int], k: int) -> Iterator[Tuple[Tuple[int], ...]]:
+def SetPartitions(S: List[int], k: int) -> Iterator[Tuple[Tuple[int, ...], ...]]:
     if k == 0:
         if not S:
             yield ()
@@ -63,7 +63,7 @@ def SetPartitions(S: List[int], k: int) -> Iterator[Tuple[Tuple[int], ...]]:
             yield s[:i] + ((s0,) + s[i],) + s[i+1:]
 
 
-def BGcurrent(k: List[Rational], w: List[Rational], g: Rational) -> Callable[[Tuple[int, ...], Expr]]:
+def BGcurrent(ks: List[Rational], ws: List[Rational], g: Rational) -> Callable[[Tuple[int, ...]], Expr]:
     @lru_cache(maxsize=None)
     def current(subset: Tuple[int, ...]) -> Expr:
         s = list(subset)
@@ -71,14 +71,14 @@ def BGcurrent(k: List[Rational], w: List[Rational], g: Rational) -> Callable[[Tu
         if len(s) == 1:
             return Rational(1)
 
-        sumsk = sum(k[i] for i in s)
-        sumsw = sum(w[i] for i in s)
+        sumsk = sum(ks[i] for i in s)
+        sumsw = sum(ws[i] for i in s)
         val = Rational(0)
 
         for m in range(2, len(s) + 1):
             for prt in SetPartitions(s, m):
-                vk = [-sumsk] + [sum(k[i] for i in p) for p in prt]
-                vw = [-sumsw] + [sum(w[i] for i in p) for p in prt]
+                vk = [-sumsk] + [sum(ks[i] for i in p) for p in prt]
+                vw = [-sumsw] + [sum(ws[i] for i in p) for p in prt]
 
                 curprod = Rational(1)
                 for p in prt:
@@ -91,16 +91,16 @@ def BGcurrent(k: List[Rational], w: List[Rational], g: Rational) -> Callable[[Tu
     return current
 
 
-def BGamplitude(k: List[Rational], w: List[Rational], g: Rational) -> Expr:
-    n = len(k)
+def BGamplitude(ks: List[Rational], ws: List[Rational], g: Rational) -> Expr:
+    n = len(ks)
     nbut0 = list(range(1, n))
-    current = BGcurrent(k, w, g)
+    current = BGcurrent(ks, ws, g)
     val = Rational(0)
 
     for m in range(2, n):
         for prt in SetPartitions(nbut0, m):
-            vk = [k[0]] + [sum(k[i] for i in p) for p in prt]
-            vw = [w[0]] + [sum(w[i] for i in p) for p in prt]
+            vk = [ks[0]] + [sum(ks[i] for i in p) for p in prt]
+            vw = [ws[0]] + [sum(ws[i] for i in p) for p in prt]
 
             curprod = Rational(1)
             for p in prt:
@@ -123,10 +123,9 @@ def MakeKinematics(wf: List[Rational], ss: List[int], g: Rational) -> Tuple[List
         raise ValueError("expected opposite first and last signs")
 
     sumwf = sum(wf)
-    sf = ss[1:-1]
-    sumsw2 = sum(s*w**2 for s, w in zip(sf, wf))
+    sumswf2 = sum(s*w**2 for s, w in zip(ss[1:-1], wf))
 
-    wn = -(ss[0] * sumwf**2 + sumsw2) / (2 * ss[0] * sumwf)
+    wn = -(ss[0] * sumwf**2 + sumswf2) / (2 * ss[0] * sumwf)
     w1 = -(sumwf + wn)
 
     ws = [w1] + list(wf) + [wn]
@@ -134,19 +133,19 @@ def MakeKinematics(wf: List[Rational], ss: List[int], g: Rational) -> Tuple[List
 
     return ks, ws
 
-
-def InclExclFormula(w: List[Rational]) -> Expr:
-    n = len(w)
-    wp = w[2:]
+# implements the RHS of equation (17) arXiv:2606.28280v1
+def InclExclFormula(ws: List[Rational]) -> Expr:
+    n = len(ws)
+    wp = ws[2:]
     np = n-2
-    betasq = min(w[0]**2, w[1]**2)
+    betasq = min(ws[0]**2, ws[1]**2)
     val = Rational(0)
     for r in range(np + 1):
         for c in combinations(range(np), r):
             subwp = [wp[i] for i in c]
             sqsum = sum(x**2 for x in subwp)
             val += (-1)**len(subwp) * max(Rational(0), betasq - sqsum)**(n-3)
-    return I * w[0] * w[1] * 2**(n-1) * val
+    return I * ws[0] * ws[1] * 2**(n-1) * val
 
 
 ks, ws = MakeKinematics(
