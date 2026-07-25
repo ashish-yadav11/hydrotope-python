@@ -50,9 +50,12 @@ def Vertex(n: int, ks: List[Rational], ws: List[Rational]) -> Expr:
 
 def Propagator(k: Rational, w: Rational, g:Rational) -> Expr:
     if k == 0:
-        return 0 # lim_ϵ→0⁺ 0/[(0+iϵ)² - g0] = 0
-    else:
-        return -I / (w**2/abs(k) - g)
+        return 0 # lim_ϵ→0⁺ 0/[(ω+iϵ)² - g0] = 0
+
+    if w**2 == g*abs(k):
+        print('Warning: internal resonance detected!')
+
+    return -I / (w**2/abs(k) - g)
 
 
 # generates all set partitions of S into k non-empty parts
