@@ -1,6 +1,6 @@
 from __future__ import annotations
 from math import factorial
-from sympy import Expr, Rational, I
+from sympy import symbols, limit, Expr, Rational, I
 from functools import lru_cache
 from itertools import combinations, permutations
 from typing import List, Tuple, Iterator, Callable
@@ -19,26 +19,40 @@ def Ekernel(n: int, ks: List[Rational]) -> Rational:
 
 
 def Fkernel(n: int, ks: List[Rational]) -> Rational:
-    val = 2 * Ekernel(n, ks) / abs(ks[0])
+    eps = symbols('epsilon')
+
+    if ks[0] == 0:
+        val = 2 * limit(Ekernel(n, [eps] + ks[1:]) / abs(eps), eps, 0, dir='+-')
+    else:
+        val = 2 * Ekernel(n, ks) / abs(ks[0])
+
+    if ks[1] == 0:
+        ks[1] = eps
 
     for m in range(1, n-2): # m goes upto n-3
         sm = sum(ks[1:m+2])
         val -= 2 * Ekernel(m+2, [-sm] + ks[1:m+2]) * Fkernel(n-m, [ks[0], sm] + ks[m+2:])
 
-    return val / abs(ks[1])
+    if ks[1] == eps:
+        return limit(val / abs(ks[1]), eps, 0, dir='+-')
+    else:
+        return val / abs(ks[1])
 
 
 def Vertex(n: int, ks: List[Rational], ws: List[Rational]) -> Expr:
     val = Rational(0)
     for p in permutations(range(n)):
-        kp = [ks[i] for i in p]
-        val += ws[p[0]] * ws[p[1]] * Fkernel(n, kp)
+        ksp = [ks[i] for i in p]
+        val += ws[p[0]] * ws[p[1]] * Fkernel(n, ksp)
 
     return -I * val / 2
 
 
 def Propagator(k: Rational, w: Rational, g:Rational) -> Expr:
-    return -I / (w**2/abs(k) - g)
+    if k == 0:
+        return 0 # lim_ϵ→0⁺ 0/[(0+iϵ)² - g0] = 0
+    else:
+        return -I / (w**2/abs(k) - g)
 
 
 # generates all set partitions of S into k non-empty parts
@@ -77,20 +91,24 @@ def BGcurrent(ks: List[Rational], ws: List[Rational], g: Rational) -> Callable[[
 
         for m in range(2, len(s) + 1):
             for prt in SetPartitions(s, m):
-                vk = [-sumsk] + [sum(ks[i] for i in p) for p in prt]
-                vw = [-sumsw] + [sum(ws[i] for i in p) for p in prt]
+                kps = [sum(ks[i] for i in p) for p in prt]
+                wps = [sum(ws[i] for i in p) for p in prt]
+
+                if 0 in kps: # kps[p] = 0 ⇒ Propagator(p, ...) = 0 ⇒ current(p) = 0
+                    continue
 
                 curprod = Rational(1)
                 for p in prt:
                     curprod *= current(tuple(p))
 
-                val += Vertex(m+1, vk, vw) * curprod
+                val += Vertex(m+1, [-sumsk] + kps, [-sumsw] + wps) * curprod
 
         return val * Propagator(sumsk, sumsw, g)
 
     return current
 
 
+# ks and ws are assumed to be non-zero
 def BGamplitude(ks: List[Rational], ws: List[Rational], g: Rational) -> Expr:
     n = len(ks)
     nbut0 = list(range(1, n))
@@ -99,14 +117,17 @@ def BGamplitude(ks: List[Rational], ws: List[Rational], g: Rational) -> Expr:
 
     for m in range(2, n):
         for prt in SetPartitions(nbut0, m):
-            vk = [ks[0]] + [sum(ks[i] for i in p) for p in prt]
-            vw = [ws[0]] + [sum(ws[i] for i in p) for p in prt]
+            kps = [sum(ks[i] for i in p) for p in prt]
+            wps = [sum(ws[i] for i in p) for p in prt]
+
+            if 0 in kps: # kps[p] = 0 ⇒ Propagator(p, ...) = 0 ⇒ current(p) = 0
+                continue
 
             curprod = Rational(1)
             for p in prt:
                 curprod *= current(tuple(p))
 
-            val += Vertex(m+1, vk, vw) * curprod
+            val += Vertex(m+1, [ks[0]] + kps, [ws[0]] + wps) * curprod
 
     return val
 
@@ -149,9 +170,10 @@ def InclExclFormula(ws: List[Rational]) -> Expr:
 
 
 ks, ws = MakeKinematics(
-    [Rational(1), Rational(2), Rational(3)],
-    [-1, -1, 1, 1, 1],
+    [Rational(1), Rational(3)],
+    [-1, -1, 1, 1],
     Rational(1)
 )
-print(BGamplitude(ks, ws, Rational(1)))
-print(InclExclFormula(ws))
+amp = BGamplitude(ks, ws, Rational(1))
+ief = InclExclFormula(ws)
+print(ks, ws, amp, ief, float(amp / ief))
