@@ -23,7 +23,7 @@ def Propagatorc(k: Rational, w: Rational) -> Expr:
     if abs(w) == abs(wk):
         print('Warning: internal resonance detected!')
 
-    return -2 * I * abs(k) * (abs(k)/omega(k)) / (w**2 - wk**2)
+    return -2 * I * abs(k) * (abs(k)/wk) / (w**2 - wk**2)
 
 def Propagators(k: Rational, w: Rational) -> Expr: # with 1/w factor from ψ expansion: prop(-1) - (-1)prop(1)
     return w
