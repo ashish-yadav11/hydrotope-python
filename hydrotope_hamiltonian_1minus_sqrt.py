@@ -6,6 +6,9 @@ from itertools import combinations, permutations, product
 from typing import List, Tuple, Iterator, Callable
 
 
+g = Rational(1)
+
+
 def Vertexc(n: int, ks: List[Rational], ws: List[Rational]) -> Expr:
     return I * (-1)**(n-1) * factorial(n-3) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
 
@@ -14,7 +17,7 @@ def Propagatorc(k: Rational, w: Rational) -> Expr:
     if w**2 == abs(k):
         print('Warning: internal resonance detected!')
 
-    return -I * k**2 / (w**2 - abs(k))
+    return -I * k**2 / (w**2 - g*abs(k))
 
 
 # generates all set partitions of S into k non-empty parts
@@ -102,7 +105,7 @@ def MakeKinematics(wf: List[Rational]) -> Tuple[List[Rational], List[Rational]]:
     w1 = -(sumwf + wn)
 
     ws = [w1] + list(wf) + [wn]
-    ks = [s*w**2 for s, w in zip(ss, ws)]
+    ks = [s*w**2 / g for s, w in zip(ss, ws)]
 
     return ks, ws
 
