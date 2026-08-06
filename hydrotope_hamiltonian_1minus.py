@@ -14,7 +14,7 @@ def omega(k):
 
 
 def Vertexc(n: int, ks: List[Rational], ws: List[Rational]) -> Expr:
-    return I * (-1)**(n-1) * 2**(-n/2) * prod([sqrt(abs(k)/omega(k)) for k in ks]) * prod([k for k in ks if k >= 0]) * 2 * factorial(n-2) / (n-2) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
+    return I * (-1)**(n-1) * 2**(-n/2) * prod([sqrt(abs(k)/omega(k)) for k in ks]) * 2 * factorial(n-2) / (n-2) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
 
 
 def Propagatorc(k: Rational, w: Rational) -> Expr:
@@ -23,7 +23,7 @@ def Propagatorc(k: Rational, w: Rational) -> Expr:
     if abs(w) == abs(wk):
         print('Warning: internal resonance detected!')
 
-    return -2 * I / (w**2 - wk**2)
+    return -2 * I * abs(k) / (w**2 - wk**2)
 
 def Propagators(k: Rational, w: Rational) -> Expr: # with 1/w factor from ψ expansion: prop(-1) - (-1)prop(1)
     return w
