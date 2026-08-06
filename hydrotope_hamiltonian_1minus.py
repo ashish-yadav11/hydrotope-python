@@ -77,20 +77,19 @@ def BGcurrent(ks: List[Rational], ws: List[Rational]) -> Callable[[Tuple[int, ..
                 for p in prt:
                     curprod *= current(tuple(p))
 
-                propslist = [1]*m
-                propdlist = [1]*m
+                propslist = [1] * m
+                propdlist = [1] * m
                 mltpl = [j for j in range(m) if len(prt[j]) > 1]
                 for i in range(m):
                     if i in mltpl:
                         propslist[i] = Propagators(-kps[i], wps[i])
                         propdlist[i] = Propagatord(-kps[i], wps[i])
-                    else:
-                        if wps[i] < 0:
-                            propslist[i] = -1
 
                 vertprop = Rational(0)
                 for i1, i2 in combinations(range(m), 2):
-                    vertprop += (omega(kps[i1])/kps[i1]) * (omega(kps[i2])/kps[i2]) * propslist[i1] * propslist[i2] * prod(propdlist[j] for j in range(m) if j not in [i1, i2])
+                    w1 = omega(kps[i1]) if i1 in mltpl else wps[i1]
+                    w2 = omega(kps[i2]) if i2 in mltpl else wps[i2]
+                    vertprop += (w1/kps[i1]) * (w2/kps[i2]) * propslist[i1] * propslist[i2] * prod(propdlist[j] for j in range(m) if j not in [i1, i2])
 
                 val += Vertexc(m+1, [-kr] + kps, [-wr] + wps) * vertprop * curprod
 
@@ -122,13 +121,12 @@ def BGamplitude(ks: List[Rational], ws: List[Rational]) -> Expr:
                 if i in mltpl:
                     propslist[i] = Propagators(-kps[i], wps[i])
                     propdlist[i] = Propagatord(-kps[i], wps[i])
-                else:
-                    if wps[i] < 0:
-                        propslist[i] = -1
 
             vertprop = Rational(0)
             for i1, i2 in combinations(range(m), 2):
-                vertprop += (omega(kps[i1])/kps[i1]) * (omega(kps[i2])/kps[i2]) * propslist[i1] * propslist[i2] * prod(propdlist[j] for j in range(m) if j not in [i1, i2])
+                w1 = omega(kps[i1]) if i1 in mltpl else wps[i1]
+                w2 = omega(kps[i2]) if i2 in mltpl else wps[i2]
+                vertprop += (w1/kps[i1]) * (w2/kps[i2]) * propslist[i1] * propslist[i2] * prod(propdlist[j] for j in range(m) if j not in [i1, i2])
 
             val += Vertexc(m+1, [ks[0]] + kps, [ws[0]] + wps) * vertprop * curprod
 
