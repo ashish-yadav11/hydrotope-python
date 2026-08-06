@@ -62,8 +62,8 @@ def BGcurrent(ks: List[Rational], ws: List[Rational]) -> Callable[[Tuple[int, ..
                 for p in prt:
                     curprod *= current(tuple(p))
 
-                xs = [1/wps[i] if len(prt[i]) == 1 else wps[i]/kps[i] for i in range(m)]
-                val += Vertexc(m+1, [-kr] + kps, [-wr] + wps) * (sum(xs)**2 - sum(x**2 for x in xs)) * curprod
+                wbyk = [w/k for k,w in zip(kps, wps)]
+                val += Vertexc(m+1, [-kr] + kps, [-wr] + wps) * (sum(wbyk)**2 - sum(x**2 for x in wbyk)) * curprod
 
         return Propagatorc(-kr, wr) * val
 
@@ -86,8 +86,8 @@ def BGamplitude(ks: List[Rational], ws: List[Rational]) -> Expr:
             for p in prt:
                 curprod *= current(tuple(p))
 
-            xs = [1/wps[i] if len(prt[i]) == 1 else wps[i]/kps[i] for i in range(m)]
-            val += Vertexc(m+1, [ks[0]] + kps, [ws[0]] + wps) * (sum(xs)**2 - sum(x**2 for x in xs)) * curprod
+            wbyk = [w/k for k,w in zip(kps, wps)]
+            val += Vertexc(m+1, [ks[0]] + kps, [ws[0]] + wps) * (sum(wbyk)**2 - sum(x**2 for x in wbyk)) * curprod
 
     return val
 

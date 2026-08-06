@@ -14,22 +14,16 @@ def omega(k):
 
 
 def Vertexc(n: int, ks: List[Rational], ws: List[Rational]) -> Expr:
-    return I * (-1)**(n-1) * 2**(-n/2 + 1) * factorial(n-3) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
+    return I * (-1)**(n-1) * 2**(-n/2) * factorial(n-3) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
 
 
 def Propagatorc(k: Rational, w: Rational) -> Expr:
     wk = omega(k)
 
-    if abs(w) == abs(wk):
+    if w**2 == wk**2:
         print('Warning: internal resonance detected!')
 
-    return -2 * I * abs(k) * (abs(k)/wk) / (w**2 - wk**2)
-
-def Propagators(k: Rational, w: Rational) -> Expr: # with 1/w factor from ψ expansion: prop(-1) - (-1)prop(1)
-    return w
-
-def Propagatord(k: Rational, w: Rational) -> Expr: # without the factor: prop(-1) - prop(1)
-    return omega(k)
+    return -2 * I * k**2 / (w**2 - wk**2)
 
 
 # generates all set partitions of S into k non-empty parts
@@ -77,21 +71,8 @@ def BGcurrent(ks: List[Rational], ws: List[Rational]) -> Callable[[Tuple[int, ..
                 for p in prt:
                     curprod *= current(tuple(p))
 
-                propslist = [1] * m
-                propdlist = [1] * m
-                mltpl = [j for j in range(m) if len(prt[j]) > 1]
-                for i in range(m):
-                    if i in mltpl:
-                        propslist[i] = Propagators(-kps[i], wps[i])
-                        propdlist[i] = Propagatord(-kps[i], wps[i])
-
-                vertprop = Rational(0)
-                for i1, i2 in combinations(range(m), 2):
-                    w1 = omega(kps[i1]) if i1 in mltpl else wps[i1]
-                    w2 = omega(kps[i2]) if i2 in mltpl else wps[i2]
-                    vertprop += (w1/kps[i1]) * (w2/kps[i2]) * propslist[i1] * propslist[i2] * prod(propdlist[j] for j in range(m) if j not in [i1, i2])
-
-                val += Vertexc(m+1, [-kr] + kps, [-wr] + wps) * vertprop * curprod
+                wbyk = [w/k for k,w in zip(kps, wps)]
+                val += Vertexc(m+1, [-kr] + kps, [-wr] + wps) * (sum(wbyk)**2 - sum(x**2 for x in wbyk)) * curprod
 
         return Propagatorc(-kr, wr) * val
 
@@ -114,21 +95,8 @@ def BGamplitude(ks: List[Rational], ws: List[Rational]) -> Expr:
             for p in prt:
                 curprod *= current(tuple(p))
 
-            propslist = [1] * m
-            propdlist = [1] * m
-            mltpl = [j for j in range(m) if len(prt[j]) > 1]
-            for i in range(m):
-                if i in mltpl:
-                    propslist[i] = Propagators(-kps[i], wps[i])
-                    propdlist[i] = Propagatord(-kps[i], wps[i])
-
-            vertprop = Rational(0)
-            for i1, i2 in combinations(range(m), 2):
-                w1 = omega(kps[i1]) if i1 in mltpl else wps[i1]
-                w2 = omega(kps[i2]) if i2 in mltpl else wps[i2]
-                vertprop += (w1/kps[i1]) * (w2/kps[i2]) * propslist[i1] * propslist[i2] * prod(propdlist[j] for j in range(m) if j not in [i1, i2])
-
-            val += Vertexc(m+1, [ks[0]] + kps, [ws[0]] + wps) * vertprop * curprod
+            wbyk = [w/k for k,w in zip(kps, wps)]
+            val += Vertexc(m+1, [ks[0]] + kps, [ws[0]] + wps) * (sum(wbyk)**2 - sum(x**2 for x in wbyk)) * curprod
 
     return val
 
@@ -149,7 +117,7 @@ def MakeKinematics(wf: List[Rational]) -> Tuple[List[Rational], List[Rational]]:
 
 
 ks, ws = MakeKinematics(
-    [Rational(1), Rational(2), Rational(3)],
+    [Rational(1), Rational(2), Rational(3), Rational(4)],
 )
 print(ks, ws)
 amp = BGamplitude(ks, ws)
