@@ -14,7 +14,7 @@ def omega(k):
 
 
 def Vertexc(n: int, ks: List[Rational], ws: List[Rational]) -> Expr:
-    return I * (-1)**(n-1) * 2**(-n/2) * factorial(n-3) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
+    return I * (-1)**(n-1) * factorial(n-3) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
 
 
 def Propagatorc(k: Rational, w: Rational) -> Expr:
@@ -23,7 +23,7 @@ def Propagatorc(k: Rational, w: Rational) -> Expr:
     if w**2 == wk**2:
         print('Warning: internal resonance detected!')
 
-    return -2 * I * k**2 / (w**2 - wk**2)
+    return -I * k**2 / (w**2 - wk**2)
 
 
 # generates all set partitions of S into k non-empty parts
