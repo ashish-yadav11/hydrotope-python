@@ -10,7 +10,7 @@ g = Rational(1)
 
 
 def omega(k):
-    return sqrt(abs(k))
+    return sqrt(g*abs(k))
 
 
 def Ekernel(n: int, ks: List[Rational]) -> Rational:
