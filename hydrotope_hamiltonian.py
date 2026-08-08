@@ -1,52 +1,15 @@
 from __future__ import annotations
 from math import factorial, prod, sqrt, pi
-from sympy import symbols, limit, Expr, Rational, I
 from functools import lru_cache
 from itertools import combinations, permutations, product
 from typing import List, Tuple, Iterator, Callable
 
 
-g = Rational(1)
+g = 1
 
 
-def omega(k):
+def omega(k: float) -> float:
     return sqrt(g*abs(k))
-
-
-def Ekernel(n: int, ks: List[Rational]) -> Rational:
-    if n == 3:
-        return -(abs(ks[0])*abs(ks[1]) + ks[0]*ks[1]) / 2
-
-    val = abs(ks[1])**(n-3) * Ekernel(3, [ks[0], ks[1], sum(ks[2:])]) / factorial(n-2)
-
-    for m in range(1, n-2): # m goes upto n-3
-        val -= (abs(ks[1])**m / factorial(m)) * Ekernel(n-m, [ks[0], sum(ks[1:m+2])] + ks[m+2:])
-
-    return val
-
-
-def Vertex(n: int, ks: List[Rational], ws: List[Rational]) -> Expr:
-    val = Rational(0)
-
-    for p in permutations(range(n)):
-        ksp = [ks[i] for i in p]
-        wsp = [ws[i] for i in p]
-
-        val +=  (-1 if wsp[0] < 0 else 1) * (-1 if wsp[1] < 0 else 1) * abs(omega(ksp[0])/ksp[0]) * abs(omega(ksp[1])/ksp[1]) * Ekernel(n, ksp) # -1 from a*(-k) factor of ψ mode expansion
-#       if ksp[0] >= 0 and ksp[1] >= 0:
-#           val += (-1 if wsp[0] < 0 else 1) * (-1 if wsp[1] < 0 else 1) * abs(omega(ksp[0])/ksp[0]) * abs(omega(ksp[1])/ksp[1]) # -1 from a*(-k) factor of ψ mode expansion
-
-    return -I * 2**(-n/2) * prod([sqrt(abs(k)/omega(k)) for k in ks]) * val
-#   return I * (-1)**(n-1) * 2**(-n/2) * prod([sqrt(abs(k)/omega(k)) for k in ks]) * prod([k for k in ks if k >= 0]) * val / (n-2) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
-
-
-def Propagator(k: Rational, w: Rational, s: int) -> Expr:
-    wk = omega(k)
-
-    if w + s*wk == 0:
-        print('Warning: internal resonance detected!')
-
-    return -I / (w + s*wk)
 
 
 # generates all set partitions of S into k non-empty parts
@@ -71,16 +34,52 @@ def SetPartitions(S: List[int], k: int) -> Iterator[Tuple[Tuple[int, ...], ...]]
             yield s[:i] + ((s0,) + s[i],) + s[i+1:]
 
 
-def BGcurrent(ks: List[Rational], ws: List[Rational]) -> Callable[[Tuple[int, ...]], Expr]:
+def Ekernel(n: int, ks: List[float]) -> float:
+    if n == 3:
+        return -(abs(ks[0])*abs(ks[1]) + ks[0]*ks[1]) / 2
+
+    val = abs(ks[1])**(n-3) * Ekernel(3, [ks[0], ks[1], sum(ks[2:])]) / factorial(n-2)
+
+    for m in range(1, n-2): # m goes upto n-3
+        val -= (abs(ks[1])**m / factorial(m)) * Ekernel(n-m, [ks[0], sum(ks[1:m+2])] + ks[m+2:])
+
+    return val
+
+
+def Vertex(n: int, ks: List[float], ws: List[float], wsgns: [int] = []) -> complex:
+    val = 0
+
+    for p in permutations(range(n)):
+        ksp = [ks[i] for i in p]
+        wsgnp0 = 1 if ws[p[0]] > 0 else -1 if ws[p[0]] < 0 else wsgns[p[0]]
+        wsgnp1 = 1 if ws[p[1]] > 0 else -1 if ws[p[1]] < 0 else wsgns[p[1]]
+        val +=  wsgnp0 * wsgnp1 * abs(omega(ksp[0])/ksp[0]) * abs(omega(ksp[1])/ksp[1]) * Ekernel(n, ksp) # -1 from a*(-k) factor of ψ mode expansion
+#       if ksp[0] >= 0 and ksp[1] >= 0:
+#           val += wsgnp0 * wsgnp1 * abs(omega(ksp[0])/ksp[0]) * abs(omega(ksp[1])/ksp[1])
+
+    return -1j * val
+#   return 1j * (-1)**(n-1) * prod([k for k in ks if k >= 0]) * val / (n-2) # (-i)**2 {from mode expansion of ψ} * (-1) {factor in front in (7) 2019ussem 2/4}
+
+
+def Propagator(k: float, w: float, s: int) -> complex:
+    wk = omega(k)
+
+    if w - s*wk == 0:
+        print('Warning: internal resonance detected!')
+
+    return -1j * s * (1/2) * (abs(k)/wk) / (w - s*wk) # 1/2 to compensate for 2**(-n/2) removal in Vertex, abs(k)/wk for prod(sqrt(abs(k)/wk))
+
+
+def BGcurrent(ks: List[float], ws: List[float]) -> Callable[[Tuple[int, ...]], complex]:
     @lru_cache(maxsize=None)
-    def current(subset: Tuple[int, ...], sign: int) -> Expr:
+    def current(subset: Tuple[int, ...], sign: int) -> complex:
         subset = list(subset)
         n = len(subset)
 
         kr = sum(ks[i] for i in subset)
         wr = sum(ws[i] for i in subset)
         swr = sign * wr
-        val = Rational(0)
+        val = 0
 
         for m in range(2, n + 1):
             for prt in SetPartitions(subset, m):
@@ -96,26 +95,25 @@ def BGcurrent(ks: List[Rational], ws: List[Rational]) -> Callable[[Tuple[int, ..
                     wpms = [signs[j] * sum(ws[i] for i in prtm[j]) for j in range(npm)]
                     print("current", prts + prtm, wpss + wpms, npm)
 
-                    curprod = Rational(1)
+                    curprod = 1
                     for j in range(npm):
                         curprod *= current(tuple(prtm[j]), signs[j])
 
-                    val += Vertex(m+1, [-kr] + kpss + kpms, [-swr] + wpss + wpms) * curprod
+                    val += Vertex(m+1, [-kr] + kpss + kpms, [-swr] + wpss + wpms, [-sign] + [0]*(m-npm) + list(signs)) * curprod
 
-        s = (1 if swr >= 0 else -1)
-        return s * Propagator(-kr, wr, -s) * val
+        return Propagator(-kr, wr, (1 if swr > 0 else -1 if swr < 0 else sign)) * val
 
     return current
 
 
 # ks and ws are assumed to be non-zero
-def BGamplitude(ks: List[Rational], ws: List[Rational]) -> Expr:
+def BGamplitude(ks: List[float], ws: List[float]) -> complex:
     n = len(ks)
     nbut0 = list(range(1, n))
     current = BGcurrent(ks, ws)
-    val = Rational(0)
+    val = 0
 
-    for m in range(2, n):
+    for m in range(2, n): # root attached to (m+1)-point vertex
         for prt in SetPartitions(nbut0, m):
             prts = [p for p in prt if len(p) == 1]
             kpss = [ks[p[0]] for p in prts]
@@ -129,11 +127,11 @@ def BGamplitude(ks: List[Rational], ws: List[Rational]) -> Expr:
                 wpms = [signs[j] * sum(ws[i] for i in prtm[j]) for j in range(npm)]
                 print("amplitude", prts + prtm, wpss + wpms, npm)
 
-                curprod = Rational(1)
+                curprod = 1
                 for j in range(npm):
                     curprod *= current(tuple(prtm[j]), signs[j])
 
-                val += Vertex(m+1, [ks[0]] + kpss + kpms, [ws[0]] + wpss + wpms) * curprod
+                val += Vertex(m+1, [ks[0]] + kpss + kpms, [ws[0]] + wpss + wpms, [0]*(n-npm) + list(signs)) * curprod
 
     return val
 
@@ -142,7 +140,7 @@ def BGamplitude(ks: List[Rational], ws: List[Rational]) -> Expr:
 # frequencies wf = [ω(2), ..., ω(n-1)]; create on-shell momenta and frequencies
 # (kᵢ = σᵢωᵢ², ωᵢ), 1 ≤ i ≤ n with Σkᵢ = Σωᵢ = 0. [the restriction σ(n) = -σ(1)
 # is only for convenience—it leads to a unique solution.]
-def MakeKinematics(wf: List[Rational], ss: List[int]) -> Tuple[List[Rational], List[Rational]]:
+def MakeKinematics(wf: List[float], ss: List[int]) -> Tuple[List[float], List[float]]:
     if len(ss) != len(wf) + 2:
         raise ValueError("expected 2 more signs than frequencies")
 
@@ -162,25 +160,25 @@ def MakeKinematics(wf: List[Rational], ss: List[int]) -> Tuple[List[Rational], L
 
 
 # implements the RHS of equation (17) arXiv:2606.28280v1
-def InclExclFormula(ws: List[Rational]) -> Expr:
+def InclExclFormula(ws: List[float]) -> complex:
     n = len(ws)
     wp = ws[2:]
     np = n-2
     betasq = min(ws[0]**2, ws[1]**2)
-    val = Rational(0)
+    val = 0
     for r in range(np + 1):
         for c in combinations(range(np), r):
             subwp = [wp[i] for i in c]
             sqsum = sum(x**2 for x in subwp)
-            val += (-1)**len(subwp) * max(Rational(0), betasq - sqsum)**(n-3)
-    return I * 2**(n/2 - 1) * sqrt(abs(prod(ws))) * ws[0] * ws[1] * val
+            val += (-1)**len(subwp) * max(0, betasq - sqsum)**(n-3)
+    return 1j * 2**(n-1) * ws[0] * ws[1] * val # sqrt(abs(prod(ks)) / abs(prod(ws)))
 
 
 ks, ws = MakeKinematics(
-    [Rational(1), Rational(2)],
-    [-1, -1, 1, 1],
+    [1, 2, 3],
+    [-1, -1, 1, 1, 1],
 )
 print(ks, ws)
 amp = BGamplitude(ks, ws)
 ief = InclExclFormula(ws)
-print(amp, ief)
+print(amp, ief, amp/ief)

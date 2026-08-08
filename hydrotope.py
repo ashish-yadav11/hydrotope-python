@@ -9,6 +9,28 @@ from typing import List, Tuple, Iterator, Callable
 g = Rational(1)
 
 
+# generates all set partitions of S into k non-empty parts
+def SetPartitions(S: List[int], k: int) -> Iterator[Tuple[Tuple[int, ...], ...]]:
+    if k == 0:
+        if not S:
+            yield ()
+        return
+
+    if len(S) < k:
+        return
+
+    s0 = S[0]
+
+    # s0 starts a new block
+    for s in SetPartitions(S[1:], k-1):
+        yield ((s0,),) + s
+
+    # s0 joins an existing block
+    for s in SetPartitions(S[1:], k):
+        for i in range(len(s)):
+            yield s[:i] + ((s0,) + s[i],) + s[i+1:]
+
+
 def Ekernel(n: int, ks: List[Rational]) -> Rational:
     if n == 3:
         return -(abs(ks[0])*abs(ks[1]) + ks[0]*ks[1]) / 2
@@ -62,28 +84,6 @@ def Propagator(k: Rational, w: Rational) -> Expr:
     return -I / (w**2/abs(k) - g)
 
 
-# generates all set partitions of S into k non-empty parts
-def SetPartitions(S: List[int], k: int) -> Iterator[Tuple[Tuple[int, ...], ...]]:
-    if k == 0:
-        if not S:
-            yield ()
-        return
-
-    if len(S) < k:
-        return
-
-    s0 = S[0]
-
-    # s0 starts a new block
-    for s in SetPartitions(S[1:], k-1):
-        yield ((s0,),) + s
-
-    # s0 joins an existing block
-    for s in SetPartitions(S[1:], k):
-        for i in range(len(s)):
-            yield s[:i] + ((s0,) + s[i],) + s[i+1:]
-
-
 def BGcurrent(ks: List[Rational], ws: List[Rational]) -> Callable[[Tuple[int, ...]], Expr]:
     @lru_cache(maxsize=None)
     def current(subset: Tuple[int, ...]) -> Expr:
@@ -124,7 +124,7 @@ def BGamplitude(ks: List[Rational], ws: List[Rational]) -> Expr:
     current = BGcurrent(ks, ws)
     val = Rational(0)
 
-    for m in range(2, n):
+    for m in range(2, n): # root attached to (m+1)-point vertex
         for prt in SetPartitions(nbut0, m):
             kps = [sum(ks[i] for i in p) for p in prt]
             wps = [sum(ws[i] for i in p) for p in prt]
