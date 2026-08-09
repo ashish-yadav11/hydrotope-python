@@ -1,5 +1,5 @@
 from __future__ import annotations
-from math import factorial, prod, sqrt, pi
+from math import factorial, prod, sqrt
 from functools import lru_cache
 from itertools import combinations, permutations, product
 from typing import List, Tuple, Iterator, Callable
@@ -106,7 +106,6 @@ def BGcurrent(ks: List[float], ws: List[float]) -> Callable[[Tuple[int, ...]], c
     return current
 
 
-# ks and ws are assumed to be non-zero
 def BGamplitude(ks: List[float], ws: List[float]) -> complex:
     n = len(ks)
     nbut0 = list(range(1, n))
